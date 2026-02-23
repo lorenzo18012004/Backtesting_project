@@ -6,11 +6,10 @@ Système complet de backtesting pour stratégies de trading sur actions (Yahoo F
 
 | Catégorie | Détails |
 |-----------|---------|
-| **Stratégies** | SMA Crossover + RSI, Bollinger Bands, MACD, RSI naïf, Buy & Hold, Portefeuille multi-actifs (style hedge fund) |
+| **Stratégies** | Buy & Hold, SMA Crossover + RSI, Portefeuille multi-actifs (style hedge fund) + Live |
 | **Métriques de risque** | Sharpe, Sortino, Calmar, VaR, Expected Shortfall, Max Drawdown, Win Rate, Profit Factor |
 | **Analyses avancées** | Monte Carlo, Bootstrap, tests statistiques (Jarque-Bera), stress test, rolling metrics |
 | **Validation** | Walk-Forward (In-Sample / Out-of-Sample), optimisation des facteurs |
-| **Interface** | Streamlit avec thème sombre, comparaison B&H et S&P 500 |
 
 ## Installation
 
@@ -101,21 +100,6 @@ pytest tests/ -v
 - **Matplotlib** — visualisation
 - **pytest** — tests
 
-## Déploiement (Streamlit Cloud)
-
-1. Pousser le repo sur GitHub
-2. Aller sur [share.streamlit.io](https://share.streamlit.io)
-3. Connecter le repo, fichier principal : `app.py`
-4. Déployer
-
 ## Données
 
 Les données proviennent de **Yahoo Finance** (gratuit, sans API key). Timeframes supportés : `1d`, `1wk`, `1mo`.
-
-## Licence
-
-MIT — voir [LICENSE](LICENSE).
-
-## Auteur
-
-**Lorenzo PHILIPPE** — [LinkedIn](https://www.linkedin.com/in/lorenzo-philippe) | [GitHub](https://github.com/lorenzo18012004/Backtesting_project)
