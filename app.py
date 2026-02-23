@@ -22,7 +22,7 @@ from backtest import (
     get_plot_figure,
 )
 
-st.set_page_config(page_title="Backtesting", page_icon="📈", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Backtesting", page_icon="📈", layout="wide", initial_sidebar_state="collapsed")
 
 # ============ STYLE ============
 st.markdown("""
