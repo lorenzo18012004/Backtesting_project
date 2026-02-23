@@ -17,3 +17,14 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Config locale
+live_config.json
+
+# Fichiers générés
+backtest_results.png
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/

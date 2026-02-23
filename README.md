@@ -1,22 +1,22 @@
-# Backtesting Engine - Actions
+# 📈 Backtesting Engine
 
-Système complet de backtesting pour stratégies de trading actions, niveau Master Finance.
+Système complet de backtesting pour stratégies de trading sur actions (Yahoo Finance). Projet portfolio — niveau Master Finance / Quantitative.
 
-## Architecture (7 étapes)
+## Fonctionnalités
 
-| Étape | Module | Description |
-|-------|--------|-------------|
-| 1 | **Data Pipeline** | Récupération OHLCV via Yahoo Finance (actions, ETFs) |
-| 2 | **Data Cleaning** | DataFrame Pandas, timestamps ISO8601, log-returns |
-| 3 | **Strategy Layer** | SMA 20/50 crossover, shift(1) anti look-ahead |
-| 4 | **PnL Engine** | Rendements stratégie, equity cumulée |
-| 5 | **Reality Check** | Frais 0,10% + slippage 0,02% par trade |
-| 6 | **Risk Report** | Sharpe, Max Drawdown, Win Rate |
-| 7 | **Visualizer** | Buy & Hold vs Strategy + courbe de Drawdown |
+| Catégorie | Détails |
+|-----------|---------|
+| **Stratégies** | SMA Crossover + RSI, Bollinger Bands, MACD, RSI naïf, Buy & Hold, Portefeuille multi-actifs (style hedge fund) |
+| **Métriques de risque** | Sharpe, Sortino, Calmar, VaR, Expected Shortfall, Max Drawdown, Win Rate, Profit Factor |
+| **Analyses avancées** | Monte Carlo, Bootstrap, tests statistiques (Jarque-Bera), stress test, rolling metrics |
+| **Validation** | Walk-Forward (In-Sample / Out-of-Sample), optimisation des facteurs |
+| **Interface** | Streamlit avec thème sombre, comparaison B&H et S&P 500 |
 
 ## Installation
 
 ```bash
+git clone https://github.com/lorenzo18012004/Backtesting_project.git
+cd Backtesting_project
 pip install -r requirements.txt
 ```
 
@@ -28,34 +28,94 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Script en ligne de commande
+### Ligne de commande (Python)
 
 ```bash
-python backtest.py
+python -m backtest
 ```
 
-### Paramètres personnalisables
+### Utilisation en code
 
 ```python
+from backtest import run_backtest, run_backtest_buy_hold, run_backtest_portfolio_hf
+
+# SMA Crossover
 df, report = run_backtest(
-    symbol="AAPL",          # Action
-    timeframe="1d",         # 1d, 1wk, 1mo
-    limit=1000,             # Nombre de bougies
+    symbol="AAPL",
+    timeframe="1d",
     sma_fast=20,
     sma_slow=50,
-    short_allowed=False,    # True pour vente à découvert
-    commission_pct=0.001,   # 0,10% (broker actions)
-    slippage_pct=0.0002,    # 0,02%
-    plot=True,
+    commission_pct=0.001,
+    slippage_pct=0.0002,
+)
+print(f"Sharpe: {report['sharpe_ratio']:.2f}, Max DD: {report['max_drawdown_pct']:.1f}%")
+
+# Buy & Hold
+df, report = run_backtest_buy_hold(symbol="AAPL", timeframe="1d")
+
+# Portefeuille multi-actifs
+df, report = run_backtest_portfolio_hf(
+    symbols=["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
+    timeframe="1d",
 )
 ```
 
-## Formules clés
+## Architecture
 
-- **Log-returns** : \( r_t = \ln(P_t / P_{t-1}) \)
-- **Sharpe Ratio** : \( \frac{E[R_p - R_f]}{\sigma_p} \)
-- **Signal** : SMA_fast > SMA_slow → 1 (long), sinon 0 ou -1 (short)
+```
+backtest/
+├── config.py      # Constantes (timeframes, periods per year)
+├── data.py        # Récupération OHLCV (Yahoo Finance), nettoyage, log-returns
+├── signals.py     # Génération de signaux (SMA, Bollinger, MACD, RSI…)
+├── pnl.py         # Rendements stratégie, frais, slippage
+├── risk.py        # Métriques de risque (Sharpe, VaR, Monte Carlo…)
+├── portfolio.py   # Stratégie multi-actifs (Markowitz, facteurs, VaR)
+├── viz.py         # Graphiques (performance, drawdown)
+└── core.py        # Orchestration (run_backtest, walk-forward)
+```
 
-## Fichiers générés
+### Pipeline (7 étapes)
 
-- `backtest_results.png` : Graphique performance + drawdown
+1. **Data Pipeline** — Récupération OHLCV via Yahoo Finance
+2. **Data Cleaning** — DataFrame Pandas, timestamps ISO8601, log-returns
+3. **Strategy Layer** — Signaux avec shift(1) anti look-ahead
+4. **PnL Engine** — Rendements stratégie, equity cumulée
+5. **Reality Check** — Frais + slippage par trade
+6. **Risk Report** — Sharpe, Max DD, VaR, etc.
+7. **Visualizer** — Courbes performance et drawdown
+
+## Tests
+
+```bash
+pytest tests/ -v
+```
+
+29 tests unitaires et d'intégration (signals, pnl, risk, fetch mocké, pipeline complet).
+
+## Stack technique
+
+- **Python 3.10+**
+- **Pandas, NumPy, SciPy** — calculs et optimisation (Markowitz)
+- **yfinance** — données OHLCV (actions, ETFs)
+- **Streamlit** — interface web
+- **Matplotlib** — visualisation
+- **pytest** — tests
+
+## Déploiement (Streamlit Cloud)
+
+1. Pousser le repo sur GitHub
+2. Aller sur [share.streamlit.io](https://share.streamlit.io)
+3. Connecter le repo, fichier principal : `app.py`
+4. Déployer
+
+## Données
+
+Les données proviennent de **Yahoo Finance** (gratuit, sans API key). Timeframes supportés : `1d`, `1wk`, `1mo`.
+
+## Licence
+
+MIT — voir [LICENSE](LICENSE).
+
+## Auteur
+
+**Lorenzo PHILIPPE** — [LinkedIn](https://www.linkedin.com/in/lorenzo-philippe) | [GitHub](https://github.com/lorenzo18012004/Backtesting_project)

@@ -235,9 +235,11 @@ if strat_id == "live":
             df_plot = df_live.copy()
             df_plot["equity_eur"] = df_plot["strategy_equity_net"] * scale
             if "bh_equity" in df_plot.columns:
-                df_plot["bh_eur"] = df_plot["bh_equity"] * (INITIAL_CAPITAL / df_plot["bh_equity"].iloc[0])
+                bh0 = float(df_plot["bh_equity"].iloc[0]) or 1.0
+                df_plot["bh_eur"] = df_plot["bh_equity"] * (INITIAL_CAPITAL / bh0)
             if "sp500_equity" in df_plot.columns:
-                df_plot["sp500_eur"] = df_plot["sp500_equity"] * (INITIAL_CAPITAL / df_plot["sp500_equity"].iloc[0])
+                sp0 = float(df_plot["sp500_equity"].iloc[0]) or 1.0
+                df_plot["sp500_eur"] = df_plot["sp500_equity"] * (INITIAL_CAPITAL / sp0)
 
             st.markdown("### Capital evolution (€)")
             fig, ax = plt.subplots(figsize=(14, 5))
@@ -367,6 +369,14 @@ if not run_btn:
 # Normalisation des tickers
 if not is_portfolio_hf:
     symbol = (symbol or "AAPL").strip().upper().split(",")[0].strip() or "AAPL"
+
+# Validation des entrées
+if start_date > end_date:
+    st.error("La date de début doit être antérieure ou égale à la date de fin.")
+    st.stop()
+if is_portfolio_hf and len(portfolio_symbols) < 2:
+    st.error("Le portefeuille HF nécessite au moins 2 symboles.")
+    st.stop()
 
 # ============ EXÉCUTION BACKTEST ============
 since = datetime.combine(start_date, datetime.min.time())
