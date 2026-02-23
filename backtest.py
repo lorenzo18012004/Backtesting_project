@@ -992,6 +992,8 @@ def apply_costs(
     Pénalité = commission + slippage + spread/2 par trade.
     Buy & Hold : 1 achat au début + 1 vente à la fin (2 trades).
     """
+    if df.empty or len(df) == 0:
+        return df
     df = df.copy()
     df["position_change"] = df["signal"].diff().abs()
 
@@ -1749,6 +1751,8 @@ def run_backtest_on_df_buy_hold(
     periods_per_year: int = 8760,
     spread_pct: float = 0.0,
 ) -> Tuple[pd.DataFrame, dict]:
+    if df_raw.empty or len(df_raw) == 0:
+        return df_raw, compute_risk_report(df_raw, periods_per_year=periods_per_year)
     df = df_raw.copy()
     df = compute_log_returns(df)
     df = generate_signals_buy_hold(df)
@@ -1936,7 +1940,9 @@ def run_walk_forward_backtest_bollinger(
 def run_walk_forward_backtest_buy_hold(symbol, timeframe, since, until, in_sample_pct=0.6, commission_pct=0.001, slippage_pct=0.0002, spread_pct=0.0, data_source="yahoo"):
     ohlcv_raw = fetch_ohlcv(symbol, timeframe, since=since, until=until, data_source=data_source)
     df = clean_ohlcv(ohlcv_raw)
-    split_idx = int(len(df) * in_sample_pct)
+    if df.empty or len(df) < 2:
+        raise ValueError(f"Données insuffisantes pour Walk-Forward : {len(df)} barres. Vérifiez le ticker ({symbol}) et la période ({since.date()} → {until.date()}).")
+    split_idx = max(1, min(len(df) - 1, int(len(df) * in_sample_pct)))
     ppy = {"1m": 525600, "5m": 105120, "15m": 35040, "1h": 8760, "4h": 2190, "1d": 365, "1wk": 52, "1mo": 12}.get(timeframe, 8760)
     df_in_bt, r_in = run_backtest_on_df_buy_hold(df.iloc[:split_idx], commission_pct, slippage_pct, periods_per_year=ppy, spread_pct=spread_pct)
     df_out_bt, r_out = run_backtest_on_df_buy_hold(df.iloc[split_idx:], commission_pct, slippage_pct, periods_per_year=ppy, spread_pct=spread_pct)
