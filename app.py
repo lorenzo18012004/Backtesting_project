@@ -506,12 +506,15 @@ if not is_buy_hold:
     if not better_vol: violated.append("Volatility")
     if not better_ir: violated.append("IR")
     violated_str = ", ".join(violated) if violated else "none"
-    apply_ok = score >= 3 and ret_s > 0 and (report_is is None or (report_is["total_return_pct"] > 0 and report["total_return_pct"] > 0))
+    validation_ok = report_is is None or (report_is["total_return_pct"] > 0 and report["total_return_pct"] > 0)
+    apply_ok = score >= 3 and ret_s > 0 and validation_ok
     if apply_ok:
         msg = f"**✅ Strategy outperforms B&H** ({score}/4 criteria) · **Recommendation: Apply**"
         if violated:
             msg += f" · Violated criteria: {violated_str}"
         st.success(msg)
+    elif score >= 3 and ret_s > 0 and not validation_ok:
+        st.warning(f"**⚠️ Strategy beats B&H on full period** ({score}/4 criteria) but **fails validation** (Period 2 negative → Overfitting). **Recommendation: Do not apply**")
     else:
         st.warning(f"**⚠️ Strategy does not outperform B&H** ({score}/4 criteria) · Violated criteria: {violated_str} · **Recommendation: Do not apply**")
 
