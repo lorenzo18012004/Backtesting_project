@@ -56,7 +56,8 @@ def fetch_ohlcv_yahoo(
     for ts, row in df.iterrows():
         ts_ms = int(pd.Timestamp(ts).timestamp() * 1000)
         ohlcv.append([ts_ms, float(row["Open"]), float(row["High"]), float(row["Low"]), float(row["Close"]), float(row["Volume"])])
-    if limit and len(ohlcv) > limit:
+    # Ne pas tronquer si since/until sont fournis : l'utilisateur a choisi la période
+    if limit and len(ohlcv) > limit and (since is None or until is None):
         ohlcv = ohlcv[-limit:]
     return ohlcv
 

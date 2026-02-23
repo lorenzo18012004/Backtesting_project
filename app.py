@@ -163,7 +163,6 @@ if st.session_state.selected_strategy is None:
                 st.rerun()
 
     st.markdown("---")
-    st.caption("Yahoo Finance • Walk-Forward • Monte Carlo • Bootstrap • Page Live pour signaux temps réel")
     st.stop()
 
 # ============ PAGE STRATÉGIE (backtest détaillé) ============
@@ -468,9 +467,10 @@ with st.spinner("Backtest en cours..."):
 st.markdown("---")
 st.markdown("## Résumé")
 
-# Ligne 1 : Contexte
+# Ligne 1 : Contexte (période affichée = période des métriques)
 ctx = f"{', '.join(portfolio_symbols)}" if is_portfolio_hf else symbol
-st.markdown(f"**{ctx}** · {timeframe} · {df.index[0].strftime('%Y-%m-%d')} → {df.index[-1].strftime('%Y-%m-%d')}")
+df_period = df_full if df_full is not None else df
+st.markdown(f"**{ctx}** · {timeframe} · {df_period.index[0].strftime('%Y-%m-%d')} → {df_period.index[-1].strftime('%Y-%m-%d')}")
 if is_portfolio_hf:
     st.caption("B&H = portefeuille équipondéré des actions · S&P 500 = benchmark marché")
 
