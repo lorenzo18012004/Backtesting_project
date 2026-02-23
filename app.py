@@ -1,5 +1,5 @@
 """
-Backtesting Engine - Multi-stratégies
+Backtesting Engine - Multi-strategy
 """
 
 import streamlit as st
@@ -27,7 +27,7 @@ st.set_page_config(page_title="Backtesting", page_icon="📈", layout="wide", in
 # ============ STYLE ============
 st.markdown("""
 <style>
-    /* Thème sombre cohérent */
+    /* Dark theme */
     .stApp { background: #0f172a; }
     div[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0c1222 0%, #1e293b 100%);
@@ -35,11 +35,11 @@ st.markdown("""
     }
     div[data-testid="stSidebar"] .stMarkdown { color: #e2e8f0; }
     
-    /* Header principal */
+    /* Main header */
     .main-header { font-size: 2rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
     .main-sub { color: #94a3b8; font-size: 1rem; margin-bottom: 2rem; }
     
-    /* Cartes stratégie - grille 2x2 */
+    /* Strategy cards - 2x2 grid */
     .strategy-card {
         background: linear-gradient(145deg, rgba(30,41,59,0.9) 0%, rgba(15,23,42,0.95) 100%);
         border-radius: 16px;
@@ -76,11 +76,11 @@ st.markdown("""
         margin: 0.25rem 0 1rem 0;
     }
     
-    /* Métriques */
+    /* Metrics */
     [data-testid="stMetricValue"] { font-size: 1.4rem; font-weight: 600; }
     [data-testid="stMetricDelta"] { font-size: 0.85rem; }
     
-    /* Boutons */
+    /* Buttons */
     .stButton > button {
         border-radius: 8px;
         font-weight: 500;
@@ -98,30 +98,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============ CONFIG STRATÉGIES ============
+# ============ STRATEGY CONFIG ============
 STRATEGIES = {
     "buy_hold": {
         "name": "Buy & Hold",
-        "description": "Toujours en position long, aucun trading actif.",
-        "detail": "Référence pour comparer. Performe bien en bull market.",
+        "description": "Always long, no active trading.",
+        "detail": "Reference for comparison. Performs well in bull markets.",
         "icon": "🏠",
     },
     "sma_crossover_rsi": {
         "name": "SMA Crossover + RSI",
-        "description": "Croisement SMA rapide/lente avec filtre RSI.",
-        "detail": "Achat au croisement haussier. N'achète pas si RSI > 70 (surchauffe).",
+        "description": "Fast/slow SMA crossover with RSI filter.",
+        "detail": "Buy on bullish crossover. Does not buy if RSI > 70 (overbought).",
         "icon": "📈",
     },
     "portfolio_hf": {
         "name": "Backtesting Portfolio",
-        "description": "Portefeuille multi-actifs : Momentum, Trend, Low Vol.",
-        "detail": "Optimisation Markowitz, contraintes de risque (VaR, corrélation, circuit breaker).",
+        "description": "Multi-asset portfolio: Momentum, Trend, Low Vol.",
+        "detail": "Markowitz optimization, risk constraints (VaR, correlation, circuit breaker).",
         "icon": "🏛️",
     },
     "live": {
         "name": "Live",
-        "description": "Backtesting Portfolio en live.",
-        "detail": "Même stratégie que Backtesting Portfolio, lancée le 23/02/2026. Capital 10 000 €. PnL et évolution à jour à chaque visite.",
+        "description": "Backtesting Portfolio live.",
+        "detail": "Same strategy as Backtesting Portfolio, launched 23/02/2026. Capital €10,000. PnL updated on each visit.",
         "icon": "🔴",
     },
 }
@@ -130,10 +130,10 @@ STRATEGIES = {
 if "selected_strategy" not in st.session_state:
     st.session_state.selected_strategy = None
 
-# ============ PAGE D'ACCUEIL ============
+# ============ HOME PAGE ============
 if st.session_state.selected_strategy is None:
     st.markdown('<p class="main-header">📈 Backtesting</p>', unsafe_allow_html=True)
-    st.markdown('<p class="main-sub">Choisis une stratégie pour lancer le backtest</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-sub">Choose a strategy to run the backtest</p>', unsafe_allow_html=True)
 
     strats_list = list(STRATEGIES.items())
     c1, c2 = st.columns(2)
@@ -151,32 +151,32 @@ if st.session_state.selected_strategy is None:
         for j in [0, 1]:
             strat_id, strat = strats_list[j]
             st.markdown(_card_html(strat), unsafe_allow_html=True)
-            if st.button("Lancer →", key=strat_id, use_container_width=True):
+            if st.button("Launch →", key=strat_id, use_container_width=True):
                 st.session_state.selected_strategy = strat_id
                 st.rerun()
     with c2:
         for j in [2, 3]:
             strat_id, strat = strats_list[j]
             st.markdown(_card_html(strat), unsafe_allow_html=True)
-            if st.button("Lancer →", key=strat_id, use_container_width=True):
+            if st.button("Launch →", key=strat_id, use_container_width=True):
                 st.session_state.selected_strategy = strat_id
                 st.rerun()
 
     st.markdown("---")
     st.stop()
 
-# ============ PAGE STRATÉGIE (backtest détaillé) ============
+# ============ STRATEGY PAGE (detailed backtest) ============
 strat_id = st.session_state.selected_strategy
 if strat_id not in STRATEGIES:
     st.session_state.selected_strategy = None
     st.rerun()
 strat = STRATEGIES[strat_id]
 
-if st.button("← Retour"):
+if st.button("← Back"):
     st.session_state.selected_strategy = None
     st.rerun()
 
-# ============ PAGE LIVE (stratégie lancée, PnL quotidien, config figée) ============
+# ============ LIVE PAGE (strategy running, daily PnL, frozen config) ============
 if strat_id == "live":
     import json
     import os
@@ -185,7 +185,7 @@ if strat_id == "live":
     LIVE_TICKERS = ["JPM", "XOM", "PG", "JNJ", "HON"]
     INITIAL_CAPITAL = 10000
 
-    # Charger ou créer la config (date de lancement figée, tickers figés)
+    # Load or create config (launch date frozen, tickers frozen)
     if os.path.exists(LIVE_CONFIG_PATH):
         with open(LIVE_CONFIG_PATH, "r", encoding="utf-8") as f:
             live_config = json.load(f)
@@ -201,18 +201,18 @@ if strat_id == "live":
     st.markdown(f"## {strat['icon']} {strat['name']}")
     st.caption(strat["description"])
     st.divider()
-    st.info(f"**Stratégie lancée le {live_config['launch_date']}** · Tickers : {', '.join(live_config['tickers'])} · Capital initial : {INITIAL_CAPITAL:,.0f} € · *Configuration figée, mise à jour automatique chaque visite.*")
+    st.info(f"**Strategy launched on {live_config['launch_date']}** · Tickers: {', '.join(live_config['tickers'])} · Initial capital: €{INITIAL_CAPITAL:,.0f} · *Config frozen, auto-updated on each visit.*")
 
     since_live = datetime.strptime(live_config["launch_date"], "%Y-%m-%d")
     until_live = datetime.now()
     symbols_live = live_config["tickers"]
 
-    with st.spinner("Chargement des données et calcul en cours..."):
+    with st.spinner("Loading data and computing..."):
         try:
             df_live, report_live = run_backtest_portfolio_hf(symbols=symbols_live, timeframe="1d", since=since_live, until=until_live, commission_pct=0.001, slippage_pct=0.0002)
 
             if df_live.empty or len(df_live) == 0:
-                st.warning("Pas encore de données pour la période. Réessaie demain après la clôture des marchés.")
+                st.warning("No data yet for this period. Try again tomorrow after market close.")
                 st.stop()
 
             eq = df_live["strategy_equity_net"].values
@@ -224,13 +224,13 @@ if strat_id == "live":
 
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                st.metric("Valeur actuelle", f"{current_val:,.0f} €", "")
+                st.metric("Current value", f"€{current_val:,.0f}", "")
             with c2:
-                st.metric("PnL", f"{pnl_eur:+,.0f} €", f"{pnl_pct:+.1f}%")
+                st.metric("PnL", f"€{pnl_eur:+,.0f}", f"{pnl_pct:+.1f}%")
             with c3:
-                st.metric("Rendement total", f"{pnl_pct:+.1f}%", "")
+                st.metric("Total return", f"{pnl_pct:+.1f}%", "")
             with c4:
-                st.metric("Dernière MAJ", df_live.index[-1].strftime("%Y-%m-%d"), "")
+                st.metric("Last update", df_live.index[-1].strftime("%Y-%m-%d"), "")
 
             df_plot = df_live.copy()
             df_plot["equity_eur"] = df_plot["strategy_equity_net"] * scale
@@ -239,15 +239,15 @@ if strat_id == "live":
             if "sp500_equity" in df_plot.columns:
                 df_plot["sp500_eur"] = df_plot["sp500_equity"] * (INITIAL_CAPITAL / df_plot["sp500_equity"].iloc[0])
 
-            st.markdown("### Évolution du capital (€)")
+            st.markdown("### Capital evolution (€)")
             fig, ax = plt.subplots(figsize=(14, 5))
-            ax.plot(df_plot.index, df_plot["equity_eur"], label="Stratégie", color="darkblue", linewidth=2)
+            ax.plot(df_plot.index, df_plot["equity_eur"], label="Strategy", color="darkblue", linewidth=2)
             if "bh_eur" in df_plot.columns:
                 ax.plot(df_plot.index, df_plot["bh_eur"], label="B&H", color="gray", alpha=0.8)
             if "sp500_eur" in df_plot.columns:
                 ax.plot(df_plot.index, df_plot["sp500_eur"], label="S&P 500", color="#475569", linestyle="-.")
-            ax.axhline(INITIAL_CAPITAL, color="red", linestyle="--", alpha=0.5, label="Capital initial")
-            ax.set_ylabel("Valeur (€)")
+            ax.axhline(INITIAL_CAPITAL, color="red", linestyle="--", alpha=0.5, label="Initial capital")
+            ax.set_ylabel("Value (€)")
             ax.set_xlabel("Date")
             ax.legend()
             ax.grid(True, alpha=0.3)
@@ -256,10 +256,10 @@ if strat_id == "live":
             st.pyplot(fig)
             plt.close()
 
-            st.markdown("### Métriques")
+            st.markdown("### Metrics")
             st.dataframe(pd.DataFrame({
-                "Métrique": ["Rendement", "Sharpe", "Max DD", "Volatilité", "Win Rate"],
-                "Valeur": [
+                "Metric": ["Return", "Sharpe", "Max DD", "Volatility", "Win Rate"],
+                "Value": [
                     f"{report_live.get('total_return_pct', 0):.1f}%",
                     f"{report_live.get('sharpe_ratio', 0):.2f}",
                     f"{report_live.get('max_drawdown_pct', 0):.1f}%",
@@ -268,11 +268,11 @@ if strat_id == "live":
                 ],
             }), use_container_width=True, hide_index=True)
         except Exception as e:
-            st.error(f"Erreur : {e}")
+            st.error(f"Error: {e}")
             st.exception(e)
     st.stop()
 
-# Paramètres selon la stratégie
+# Parameters by strategy
 use_rsi_filter = strat_id == "sma_crossover_rsi"
 is_buy_hold = strat_id == "buy_hold"
 is_portfolio_hf = strat_id == "portfolio_hf"
@@ -281,18 +281,18 @@ is_portfolio_hf = strat_id == "portfolio_hf"
 with st.sidebar:
     st.title(f"{strat['icon']} {strat['name']}")
 
-    symbol = st.text_input("Action (ticker)", value="AAPL", placeholder="ex: AAPL, TSLA")
+    symbol = st.text_input("Stock (ticker)", value="AAPL", placeholder="e.g. AAPL, TSLA")
     timeframe = st.selectbox("Timeframe", ["1d", "1wk", "1mo"], index=0)
 
     end_d = datetime.now()
     start_d = end_d - timedelta(days=365)
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("Début", value=start_d)
+        start_date = st.date_input("Start", value=start_d)
     with col2:
-        end_date = st.date_input("Fin", value=end_d)
+        end_date = st.date_input("End", value=end_d)
 
-    st.subheader("Stratégie")
+    st.subheader("Strategy")
     sma_fast, sma_slow = 20, 50
     rsi_period, use_volume_filter, volume_ma_period = 14, False, 20
     portfolio_symbols = ["AAPL", "MSFT", "GOOGL"]
@@ -300,39 +300,39 @@ with st.sidebar:
     volatility_filter = True
 
     if is_buy_hold:
-        st.info("Aucun paramètre : toujours en position long.")
+        st.info("No parameters: always long.")
     elif is_portfolio_hf:
         portfolio_tickers = st.text_input(
-            "Actions (min 2, séparées par des virgules)",
+            "Stocks (min 2, comma-separated)",
             value="AAPL, MSFT, GOOGL, AMZN, NVDA",
-            placeholder="ex: AAPL, MSFT, GOOGL, AMZN, NVDA",
+            placeholder="e.g. AAPL, MSFT, GOOGL, AMZN, NVDA",
             key="hf_symbols",
         )
         portfolio_symbols = [s.strip().upper() for s in portfolio_tickers.replace(";", ",").split(",") if s.strip()]
-        st.caption("Période 1 : optimisation des facteurs (max SR) · Période 2 : validation")
-        with st.expander("Paramètres fixes (lookbacks, Markowitz, risk)", expanded=True):
+        st.caption("Period 1: factor optimization (max SR) · Period 2: validation")
+        with st.expander("Fixed parameters (lookbacks, Markowitz, risk)", expanded=True):
             factor_momentum_lb = st.number_input("Momentum lookback", value=20, min_value=5, max_value=100, key="hf_mom")
-            factor_value_lb = st.number_input("Trend lookback (prix vs SMA)", value=50, min_value=10, max_value=200, key="hf_val")
+            factor_value_lb = st.number_input("Trend lookback (price vs SMA)", value=50, min_value=10, max_value=200, key="hf_val")
             factor_vol_lb = st.number_input("Low vol lookback", value=20, min_value=5, max_value=100, key="hf_vol")
             markowitz_lookback = st.number_input("Lookback Markowitz", value=252, min_value=60, max_value=504, key="hf_mk")
-            rebalance_bars = st.number_input("Rebalance (barres)", value=21, min_value=5, max_value=63, key="hf_rebal")
-            var_limit_pct = st.number_input("Limite VaR % (0 = désactivé)", value=2.0, min_value=0.0, max_value=10.0, step=0.5, key="hf_var")
-            max_correlation = st.slider("Max corrélation entre actifs", 0.5, 0.99, 0.85, key="hf_corr")
-            max_weight_per_asset = st.slider("Max poids par actif", 0.1, 0.8, 0.4, key="hf_maxw")
-            max_dd_circuit = st.number_input("Circuit breaker DD % (0 = désactivé)", value=12.0, min_value=0.0, max_value=50.0, step=1.0, key="hf_cb")
-        with st.expander("Régime, Vol targeting, Turnover", expanded=False):
-            use_regime_detection = st.checkbox("Détection régime marché", value=True, key="hf_regime")
-            regime_lookback = st.number_input("Régime lookback", value=63, min_value=20, max_value=126, key="hf_reg_lb")
+            rebalance_bars = st.number_input("Rebalance (bars)", value=21, min_value=5, max_value=63, key="hf_rebal")
+            var_limit_pct = st.number_input("VaR limit % (0 = disabled)", value=2.0, min_value=0.0, max_value=10.0, step=0.5, key="hf_var")
+            max_correlation = st.slider("Max correlation between assets", 0.5, 0.99, 0.85, key="hf_corr")
+            max_weight_per_asset = st.slider("Max weight per asset", 0.1, 0.8, 0.4, key="hf_maxw")
+            max_dd_circuit = st.number_input("Circuit breaker DD % (0 = disabled)", value=12.0, min_value=0.0, max_value=50.0, step=1.0, key="hf_cb")
+        with st.expander("Regime, Vol targeting, Turnover", expanded=False):
+            use_regime_detection = st.checkbox("Market regime detection", value=True, key="hf_regime")
+            regime_lookback = st.number_input("Regime lookback", value=63, min_value=20, max_value=126, key="hf_reg_lb")
             regime_bear_scale = st.slider("Scale bear market", 0.2, 1.0, 0.5, key="hf_bear")
             regime_range_scale = st.slider("Scale range market", 0.5, 1.0, 0.75, key="hf_range")
-            vol_target_ann_pct = st.number_input("Vol targeting % (0 = désactivé)", value=15.0, min_value=0.0, max_value=30.0, step=1.0, key="hf_vol_t")
-            turnover_threshold = st.number_input("Turnover min % (0 = désactivé)", value=0.03, min_value=0.0, max_value=0.2, step=0.01, key="hf_to_thr")
-            max_turnover_per_rebalance = st.number_input("Max turnover/rebalance (0 = désactivé)", value=0.3, min_value=0.0, max_value=1.0, step=0.1, key="hf_to_max")
-            use_ir_objective = st.checkbox("Markowitz max IR (sinon Sharpe)", value=True, key="hf_ir")
-            rolling_windows = st.number_input("Walk-forward glissant (fenêtres)", value=1, min_value=1, max_value=5, key="hf_roll")
+            vol_target_ann_pct = st.number_input("Vol targeting % (0 = disabled)", value=15.0, min_value=0.0, max_value=30.0, step=1.0, key="hf_vol_t")
+            turnover_threshold = st.number_input("Min turnover % (0 = disabled)", value=0.03, min_value=0.0, max_value=0.2, step=0.01, key="hf_to_thr")
+            max_turnover_per_rebalance = st.number_input("Max turnover/rebalance (0 = disabled)", value=0.3, min_value=0.0, max_value=1.0, step=0.1, key="hf_to_max")
+            use_ir_objective = st.checkbox("Markowitz max IR (else Sharpe)", value=True, key="hf_ir")
+            rolling_windows = st.number_input("Rolling walk-forward (windows)", value=1, min_value=1, max_value=5, key="hf_roll")
     else:  # sma_crossover_rsi
-        sma_fast = st.number_input("SMA rapide", value=20, min_value=2, max_value=100)
-        sma_slow = st.number_input("SMA lente", value=50, min_value=2, max_value=200)
+        sma_fast = st.number_input("Fast SMA", value=20, min_value=2, max_value=100)
+        sma_slow = st.number_input("Slow SMA", value=50, min_value=2, max_value=200)
         stop_loss_pct = st.number_input("Stop Loss %", value=5.0, min_value=0.0, max_value=20.0, step=0.5, key="sma_sl")
         take_profit_pct = st.number_input("Take Profit %", value=15.0, min_value=0.0, max_value=50.0, step=0.5, key="sma_tp")
 
@@ -343,13 +343,13 @@ with st.sidebar:
     in_sample_pct = 0.6
     rsi_long_max, rsi_short_min = 70.0, 30.0
 
-    with st.expander("Paramètres avancés", expanded=False):
+    with st.expander("Advanced parameters", expanded=False):
         if strat_id == "sma_crossover_rsi":
-            short_allowed = st.checkbox("Short autorisé", value=False)
-            rsi_period = st.number_input("Période RSI", value=14, key="rsi_sma")
-            rsi_long_max = st.slider("RSI max achat", 50.0, 90.0, 70.0)
+            short_allowed = st.checkbox("Short allowed", value=False)
+            rsi_period = st.number_input("RSI period", value=14, key="rsi_sma")
+            rsi_long_max = st.slider("RSI max buy", 50.0, 90.0, 70.0)
             rsi_short_min = st.slider("RSI min short", 10.0, 50.0, 30.0)
-            use_volume_filter = st.checkbox("Filtre Volume", value=False, key="vol_sma")
+            use_volume_filter = st.checkbox("Volume filter", value=False, key="vol_sma")
             volume_ma_period = st.number_input("MA Volume", value=20, key="vol_ma") if use_volume_filter else 20
         commission_pct = st.slider("Commission %", 0.0, 0.5, 0.1) / 100
         slippage_pct = st.slider("Slippage %", 0.0, 0.1, 0.03) / 100
@@ -357,11 +357,11 @@ with st.sidebar:
         use_walk_forward = st.checkbox("Walk-Forward", value=True)
         in_sample_pct = st.slider("% In-Sample", 0.5, 0.8, 0.6)
 
-    run_btn = st.button("▶ LANCER LE BACKTEST", type="primary", use_container_width=True)
+    run_btn = st.button("▶ RUN BACKTEST", type="primary", use_container_width=True)
 
-# ============ MAIN (si pas encore lancé) ============
+# ============ MAIN (if not yet launched) ============
 if not run_btn:
-    st.info("👈 Configure les paramètres à gauche et clique sur **LANCER LE BACKTEST**")
+    st.info("👈 Configure parameters on the left and click **RUN BACKTEST**")
     st.stop()
 
 # Normalisation des tickers
@@ -380,7 +380,7 @@ def _run_bt(wf_fn, bt_fn, wf_kwargs, bt_kwargs):
     df, report = bt_fn(**bt_kwargs)
     return df, report, None, None
 
-with st.spinner("Backtest en cours..."):
+with st.spinner("Running backtest..."):
     try:
         report_is = None
         df = None
@@ -436,7 +436,7 @@ with st.spinner("Backtest en cours..."):
                 df_in = None
                 df_full = None
         elif is_portfolio_hf:
-            st.error("Sélectionne au moins 2 actions pour le Backtesting Portfolio.")
+            st.error("Select at least 2 stocks for the Backtesting Portfolio.")
             st.stop()
         else:  # sma_crossover_rsi
             kw = {**base_kw, "sma_fast": sma_fast, "sma_slow": sma_slow, "short_allowed": short_allowed,
@@ -459,28 +459,28 @@ with st.spinner("Backtest en cours..."):
         pro = run_pro_analysis(df, periods_per_year=periods_ppy, n_monte_carlo=500, n_bootstrap=500)
 
     except Exception as e:
-        st.error(f"Erreur : {e}")
+        st.error(f"Error: {e}")
         st.exception(e)
         st.stop()
 
 # ============ DASHBOARD ============
 st.markdown("---")
-st.markdown("## Résumé")
+st.markdown("## Summary")
 
-# Ligne 1 : Contexte (période affichée = période des métriques)
+# Line 1: Context (displayed period = metrics period)
 ctx = f"{', '.join(portfolio_symbols)}" if is_portfolio_hf else symbol
 df_period = df_full if df_full is not None else df
 st.markdown(f"**{ctx}** · {timeframe} · {df_period.index[0].strftime('%Y-%m-%d')} → {df_period.index[-1].strftime('%Y-%m-%d')}")
 if is_portfolio_hf:
-    st.caption("B&H = portefeuille équipondéré des actions · S&P 500 = benchmark marché")
+    st.caption("B&H = equal-weighted portfolio · S&P 500 = market benchmark")
 
-# Ligne 2 : Walk-Forward (masqué pour B&H)
+# Line 2: Walk-Forward (hidden for B&H)
 if not is_buy_hold and use_walk_forward and (until - since).days > 180 and report_is is not None:
-    st.markdown("**Période 1** (optimisation) → **Période 2** (validation)")
+    st.markdown("**Period 1** (optimization) → **Period 2** (validation)")
     if is_portfolio_hf and wf_opt_params:
-        st.caption(f"Facteurs optimisés : Mom {wf_opt_params.get('factor_w_momentum', 0):.2f} · Trend {wf_opt_params.get('factor_w_value', 0):.2f} · LowVol {wf_opt_params.get('factor_w_vol', 0):.2f} · Seuil {wf_opt_params.get('factor_threshold', 0):.2f}")
+        st.caption(f"Optimized factors: Mom {wf_opt_params.get('factor_w_momentum', 0):.2f} · Trend {wf_opt_params.get('factor_w_value', 0):.2f} · LowVol {wf_opt_params.get('factor_w_vol', 0):.2f} · Threshold {wf_opt_params.get('factor_threshold', 0):.2f}")
 
-# Rapport utilisé : toute la période si dispo (cohérence avec "Toute période")
+# Report used: full period if available (consistent with "Full period")
 r_main = compute_risk_report(df_full, periods_per_year=periods_ppy) if df_full is not None else report
 
 ret_s, ret_bh = r_main["total_return_pct"], r_main["bh_return_pct"]
@@ -493,7 +493,7 @@ ir = r_main.get("information_ratio", 0) or 0
 wr_s = r_main.get("period_win_rate_pct", r_main.get("win_rate_pct", 0)) or 0
 wr_bh = r_main.get("bh_win_rate_pct", 0) or 0
 
-# Verdict et comparaison : masqués pour Buy & Hold (pas de référence à comparer)
+# Verdict and comparison: hidden for Buy & Hold (no reference to compare)
 if not is_buy_hold:
     better_sharpe = sharpe_s > sharpe_bh
     better_dd = dd_s > dd_bh
@@ -503,32 +503,32 @@ if not is_buy_hold:
     violated = []
     if not better_sharpe: violated.append("Sharpe")
     if not better_dd: violated.append("Max DD")
-    if not better_vol: violated.append("Volatilité")
+    if not better_vol: violated.append("Volatility")
     if not better_ir: violated.append("IR")
-    violated_str = ", ".join(violated) if violated else "aucun"
+    violated_str = ", ".join(violated) if violated else "none"
     apply_ok = score >= 3 and ret_s > 0 and (report_is is None or (report_is["total_return_pct"] > 0 and report["total_return_pct"] > 0))
     if apply_ok:
-        msg = f"**✅ La stratégie est meilleure que B&H** ({score}/4 critères) · **Recommandation : Appliquer**"
+        msg = f"**✅ Strategy outperforms B&H** ({score}/4 criteria) · **Recommendation: Apply**"
         if violated:
-            msg += f" · Critères violés : {violated_str}"
+            msg += f" · Violated criteria: {violated_str}"
         st.success(msg)
     else:
-        st.warning(f"**⚠️ La stratégie n'est pas meilleure que B&H** ({score}/4 critères) · Critères violés : {violated_str} · **Recommandation : Ne pas appliquer**")
+        st.warning(f"**⚠️ Strategy does not outperform B&H** ({score}/4 criteria) · Violated criteria: {violated_str} · **Recommendation: Do not apply**")
 
-# Métriques : tableau simple pour B&H (sans comparaison), comparaison Strat vs B&H vs S&P pour les autres
-st.markdown("### Stratégie vs B&H vs S&P 500" if not is_buy_hold else "### Métriques")
+# Metrics: simple table for B&H (no comparison), Strat vs B&H vs S&P for others
+st.markdown("### Strategy vs B&H vs S&P 500" if not is_buy_hold else "### Metrics")
 if df_full is not None and not is_buy_hold:
-    st.caption("Métriques sur toute la période (cohérent avec « Toute période »)")
+    st.caption("Metrics over full period (consistent with « Full period »)")
 if is_buy_hold:
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("Rendement", f"{ret_s:.1f}%", None)
+        st.metric("Return", f"{ret_s:.1f}%", None)
     with col2:
         st.metric("Sharpe", f"{sharpe_s:.2f}", None)
     with col3:
         st.metric("Max Drawdown", f"{dd_s:.1f}%", None)
     with col4:
-        st.metric("Volatilité ann.", f"{vol_s:.1f}%", None)
+        st.metric("Ann. volatility", f"{vol_s:.1f}%", None)
     with col5:
         st.metric("Win Rate", f"{wr_s:.0f}%", None)
 elif (has_sp500 := is_portfolio_hf and "sp500_return_pct" in r_main):
@@ -539,81 +539,81 @@ elif (has_sp500 := is_portfolio_hf and "sp500_return_pct" in r_main):
     wr_sp = r_main.get("sp500_win_rate_pct", 0) or 0
     ir_sp = r_main.get("information_ratio_vs_sp500", 0) or 0
     tbl = pd.DataFrame({
-        "Métrique": ["Rendement", "Sharpe", "Max DD", "Volatilité", "Win Rate", "IR (vs B&H)", "IR (vs S&P 500)"],
+        "Metric": ["Return", "Sharpe", "Max DD", "Volatility", "Win Rate", "IR (vs B&H)", "IR (vs S&P 500)"],
         "Strat": [f"{ret_s:.1f}%", f"{sharpe_s:.2f}", f"{dd_s:.1f}%", f"{vol_s:.1f}%", f"{wr_s:.0f}%", f"{ir:.2f}", f"{ir_sp:.2f}"],
-        "B&H (portefeuille)": [f"{ret_bh:.1f}%", f"{sharpe_bh:.2f}", f"{dd_bh:.1f}%", f"{vol_bh:.1f}%", f"{wr_bh:.0f}%", "—", "—"],
+        "B&H (portfolio)": [f"{ret_bh:.1f}%", f"{sharpe_bh:.2f}", f"{dd_bh:.1f}%", f"{vol_bh:.1f}%", f"{wr_bh:.0f}%", "—", "—"],
         "S&P 500 (benchmark)": [f"{ret_sp:.1f}%", f"{sharpe_sp:.2f}", f"{dd_sp:.1f}%", f"{vol_sp:.1f}%", f"{wr_sp:.0f}%", "—", "—"],
     })
     st.dataframe(tbl, use_container_width=True, hide_index=True)
 else:
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
-        st.metric("Rendement", f"Strat {ret_s:.1f}%", f"B&H {ret_bh:.1f}%")
+        st.metric("Return", f"Strat {ret_s:.1f}%", f"B&H {ret_bh:.1f}%")
     with col2:
         st.metric("Sharpe", f"Strat {sharpe_s:.2f}", f"B&H {sharpe_bh:.2f}")
     with col3:
         st.metric("Max Drawdown", f"Strat {dd_s:.1f}%", f"B&H {dd_bh:.1f}%")
     with col4:
-        st.metric("Volatilité ann.", f"Strat {vol_s:.1f}%", f"B&H {vol_bh:.1f}%")
+        st.metric("Ann. volatility", f"Strat {vol_s:.1f}%", f"B&H {vol_bh:.1f}%")
     with col5:
         st.metric("Win Rate", f"Strat {wr_s:.0f}%", f"B&H {wr_bh:.0f}%")
     with col6:
-        st.metric("IR (vs B&H)", f"{ir:.2f}", "> 0 = mieux")
+        st.metric("IR (vs B&H)", f"{ir:.2f}", "> 0 = better")
 if not is_buy_hold:
-    st.caption(f"Verdict Walk-Forward : {'Robuste' if (report_is and report_is['total_return_pct'] > 0 and report['total_return_pct'] > 0) else ('Surajustement' if report_is else '—')}")
+    st.caption(f"Walk-Forward verdict: {'Robust' if (report_is and report_is['total_return_pct'] > 0 and report['total_return_pct'] > 0) else ('Overfitting' if report_is else '—')}")
 
-# Walk-Forward : 3 périodes (masqué pour B&H)
+# Walk-Forward: 3 periods (hidden for B&H)
 if not is_buy_hold and use_walk_forward and (until - since).days > 180 and report_is is not None:
-    st.markdown("### Par période")
+    st.markdown("### By period")
     c_is, c_oos, c_all = st.columns(3)
     with c_is:
-        st.metric("Période 1 (optim.)", f"{report_is['total_return_pct']:.1f}%", f"Sharpe {report_is['sharpe_ratio']:.2f}")
+        st.metric("Period 1 (optim.)", f"{report_is['total_return_pct']:.1f}%", f"Sharpe {report_is['sharpe_ratio']:.2f}")
     with c_oos:
-        st.metric("Période 2 (valid.)", f"{report['total_return_pct']:.1f}%", f"Sharpe {report['sharpe_ratio']:.2f}")
+        st.metric("Period 2 (valid.)", f"{report['total_return_pct']:.1f}%", f"Sharpe {report['sharpe_ratio']:.2f}")
     with c_all:
         if df_full is not None:
-            st.metric("Toute période", f"{r_main['total_return_pct']:.1f}%", f"Sharpe {r_main['sharpe_ratio']:.2f}")
+            st.metric("Full period", f"{r_main['total_return_pct']:.1f}%", f"Sharpe {r_main['sharpe_ratio']:.2f}")
         else:
-            st.metric("Toute période", "—", "")
+            st.metric("Full period", "—", "")
 
 st.markdown("---")
-st.markdown("## Graphiques")
+st.markdown("## Charts")
 
 def _main_chart(d, title, suffix=""):
-    """Un seul graphique : Performance Strat vs B&H + Drawdown (ou courbe seule pour B&H)."""
+    """Single chart: Strategy vs B&H performance + Drawdown (or single curve for B&H)."""
     close_cols = [c for c in d.columns if c.startswith("Close_")] if is_portfolio_hf else None
     return get_plot_figure(d, title=title, symbol=symbol if not is_portfolio_hf else "Portfolio", close_cols=close_cols, dark_theme=False, compact=is_portfolio_hf, force_show_brute=is_portfolio_hf, hide_comparison=is_buy_hold)
 
 if is_buy_hold:
-    # B&H : un seul graphique (vue d'ensemble)
+    # B&H: single chart (overview)
     d_show = df_full if df_full is not None else df
     st.pyplot(_main_chart(d_show, f"Performance · {d_show.index[0].strftime('%Y-%m-%d')} → {d_show.index[-1].strftime('%Y-%m-%d')}"))
 elif df_in is not None:
-    st.markdown("**Période 1** (optimisation)")
+    st.markdown("**Period 1** (optimization)")
     st.pyplot(_main_chart(df_in, f"In-Sample · {df_in.index[0].strftime('%Y-%m-%d')} → {df_in.index[-1].strftime('%Y-%m-%d')}"))
-    st.markdown("**Période 2** (validation)")
+    st.markdown("**Period 2** (validation)")
     st.pyplot(_main_chart(df, f"Out-of-Sample · {df.index[0].strftime('%Y-%m-%d')} → {df.index[-1].strftime('%Y-%m-%d')}"))
     if df_full is not None:
-        st.markdown("**Vue d'ensemble** (toute la période)")
-        st.pyplot(_main_chart(df_full, f"Toute période · {df_full.index[0].strftime('%Y-%m-%d')} → {df_full.index[-1].strftime('%Y-%m-%d')}"))
+        st.markdown("**Overview** (full period)")
+        st.pyplot(_main_chart(df_full, f"Full period · {df_full.index[0].strftime('%Y-%m-%d')} → {df_full.index[-1].strftime('%Y-%m-%d')}"))
 else:
     st.pyplot(_main_chart(df, f"Performance · {df.index[0].strftime('%Y-%m-%d')} → {df.index[-1].strftime('%Y-%m-%d')}"))
 
-# Monte Carlo, Tests stat, Données : masqués pour B&H
+# Monte Carlo, Statistical tests, Data: hidden for B&H
 if not is_buy_hold:
-    tab1, tab2, tab3 = st.tabs(["Monte Carlo & Bootstrap", "Tests statistiques & Stress", "Données"])
+    tab1, tab2, tab3 = st.tabs(["Monte Carlo & Bootstrap", "Statistical tests & Stress", "Data"])
     with tab1:
         if "error" not in pro:
             mc, bs = pro["monte_carlo"], pro["bootstrap"]
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown("**Monte Carlo** (500 sim.)")
-                st.metric("Proba rendement > 0", f"{mc['prob_positive_return']:.0f}%")
-                st.caption(f"Rendement IC 90% : [{mc['final_return_5pct']:.1f}% ; {mc['final_return_95pct']:.1f}%]")
+                st.metric("Prob return > 0", f"{mc['prob_positive_return']:.0f}%")
+                st.caption(f"Return 90% CI: [{mc['final_return_5pct']:.1f}% ; {mc['final_return_95pct']:.1f}%]")
             with c2:
                 st.markdown("**Bootstrap** (500 iter.)")
-                st.metric("Rendement IC 95%", f"[{bs['return_ci_95_low']:.1f}% ; {bs['return_ci_95_high']:.1f}%]")
-                st.caption(f"Sharpe IC 95% : [{bs['sharpe_ci_95_low']:.2f} ; {bs['sharpe_ci_95_high']:.2f}]")
+                st.metric("Return 95% CI", f"[{bs['return_ci_95_low']:.1f}% ; {bs['return_ci_95_high']:.1f}%]")
+                st.caption(f"Sharpe 95% CI: [{bs['sharpe_ci_95_low']:.2f} ; {bs['sharpe_ci_95_high']:.2f}]")
             if len(pro["rolling_metrics"]) > 0:
                 st.line_chart(pro["rolling_metrics"].rename(columns={
                     "rolling_sharpe": "Sharpe", "rolling_vol": "Vol %", "rolling_dd": "DD %"
@@ -629,7 +629,7 @@ if not is_buy_hold:
                 st.write(f"Skewness: {st_['skewness']:.2f} | Kurtosis: {st_['kurtosis']:.2f}")
             with c2:
                 st.markdown("**Stress Test**")
-                st.metric("Pire période", f"{stress['worst_single_return_pct']:.1f}%")
+                st.metric("Worst period", f"{stress['worst_single_return_pct']:.1f}%")
     with tab3:
         if is_portfolio_hf:
             close_cols = [c for c in df.columns if c.startswith("Close_")]
@@ -637,13 +637,13 @@ if not is_buy_hold:
             if "sp500_equity" in df.columns:
                 base_cols.append("sp500_equity")
             disp = df[base_cols + close_cols].copy()
-            disp.columns = (["Equity Strat.", "Equity B&H"] + (["S&P 500"] if "sp500_equity" in df.columns else []) + [c.replace("Close_", "") for c in close_cols])
+            disp.columns = (["Strat. Equity", "B&H Equity"] + (["S&P 500"] if "sp500_equity" in df.columns else []) + [c.replace("Close_", "") for c in close_cols])
         elif "SMA_fast" in df.columns:
             disp = df[["Close", "SMA_fast", "SMA_slow", "signal", "strategy_equity_net", "bh_equity"]].copy()
-            disp.columns = ["Close", "SMA Fast", "SMA Slow", "Signal", "Equity Strat.", "Equity B&H"]
+            disp.columns = ["Close", "SMA Fast", "SMA Slow", "Signal", "Strat. Equity", "B&H Equity"]
         else:
             disp = df[["Close", "signal", "strategy_equity_net", "bh_equity"]].copy()
-            disp.columns = ["Close", "Signal", "Equity Strat.", "Equity B&H"]
+            disp.columns = ["Close", "Signal", "Strat. Equity", "B&H Equity"]
         st.dataframe(disp, use_container_width=True)
         fn = f"backtest_portfolio_{'_'.join(s.replace('/', '') for s in portfolio_symbols)}.csv" if is_portfolio_hf else f"backtest_{symbol.replace('/', '_')}.csv"
         st.download_button("📥 CSV", disp.to_csv(), file_name=fn, mime="text/csv")

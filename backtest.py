@@ -807,7 +807,8 @@ def run_backtest_portfolio_hf(
         turnover = pd.Series(0.0, index=common_idx)
         for sym in symbols:
             turnover = turnover + weight_series[sym].diff().abs().fillna(0)
-        cost_per_trade = commission_pct + slippage_pct + spread_pct
+        # Même convention que apply_costs : commission + slippage + demi-spread par trade
+        cost_per_trade = commission_pct + slippage_pct + spread_pct / 2
         portfolio_return = portfolio_return - turnover * cost_per_trade
 
     if max_dd_circuit_breaker is not None and max_dd_circuit_breaker > 0 and n > 10:
@@ -1278,8 +1279,8 @@ def statistical_tests(returns: pd.Series) -> dict:
         "skewness": skew,
         "kurtosis": kurt,
         "interpretation": (
-            "Rendements proches d'une loi normale" if jb_pvalue > 0.05
-            else "Rendements NON normaux (queues épaisses, asymétrie)"
+            "Returns close to normal distribution" if jb_pvalue > 0.05
+            else "Returns NOT normal (fat tails, asymmetry)"
         ),
     }
 
@@ -1480,7 +1481,7 @@ def get_price_chart_figure(
     """
     fig, ax = plt.subplots(figsize=(14, 6))
     price_color = "#e2e8f0" if dark_theme else "black"
-    ax.plot(df.index, df["Close"], label="Prix", color=price_color, alpha=0.85, linewidth=1)
+    ax.plot(df.index, df["Close"], label="Price", color=price_color, alpha=0.85, linewidth=1)
 
     if strategy_type == "price":
         pass  # Prix seul, pas d'indicateur
@@ -1503,19 +1504,19 @@ def get_price_chart_figure(
         ax2.set_ylim(0, 100)
         ax2.legend(loc="upper right", fontsize=8)
     elif "SMA_fast" in df.columns:
-        ax.plot(df.index, df["SMA_fast"], label="SMA rapide", color="green", alpha=0.8, linewidth=1.5)
-        ax.plot(df.index, df["SMA_slow"], label="SMA lente", color="orange", alpha=0.8, linewidth=1.5)
+        ax.plot(df.index, df["SMA_fast"], label="Fast SMA", color="green", alpha=0.8, linewidth=1.5)
+        ax.plot(df.index, df["SMA_slow"], label="Slow SMA", color="orange", alpha=0.8, linewidth=1.5)
 
     if show_signals and "signal" in df.columns:
         # Points d'entrée (passage à 1)
         entries = df[df["signal"].diff() == 1]
         exits = df[df["signal"].diff() == -1]
         if len(entries) > 0:
-            ax.scatter(entries.index, entries["Close"], color="green", marker="^", s=80, zorder=5, label="Entrée long")
+            ax.scatter(entries.index, entries["Close"], color="green", marker="^", s=80, zorder=5, label="Long entry")
         if len(exits) > 0:
-            ax.scatter(exits.index, exits["Close"], color="red", marker="v", s=80, zorder=5, label="Sortie")
+            ax.scatter(exits.index, exits["Close"], color="red", marker="v", s=80, zorder=5, label="Exit")
 
-    ax.set_ylabel("Prix")
+    ax.set_ylabel("Price")
     ax.set_xlabel("Date")
     ax.set_title(title)
     ax.legend(loc="upper left")
@@ -1536,9 +1537,9 @@ def get_price_chart_figure(
     return fig
 
 
-def get_plot_figure(df: pd.DataFrame, title: str = "Backtest : Performance & Drawdown", symbol: str = "", close_cols: Optional[list] = None, dark_theme: bool = False, compact: bool = False, force_show_brute: bool = False, hide_comparison: bool = False):
+def get_plot_figure(df: pd.DataFrame, title: str = "Backtest: Performance & Drawdown", symbol: str = "", close_cols: Optional[list] = None, dark_theme: bool = False, compact: bool = False, force_show_brute: bool = False, hide_comparison: bool = False):
     """
-    Retourne une figure matplotlib. compact=True : seulement Performance + Drawdown (sans prix).
+    Returns a matplotlib figure. compact=True: Performance + Drawdown only (no price).
     """
     if compact or (close_cols and len(close_cols) > 3):
         fig, axes = plt.subplots(2, 1, figsize=(14, 8), height_ratios=[2, 1], sharex=True)
@@ -1577,16 +1578,16 @@ def get_plot_figure(df: pd.DataFrame, title: str = "Backtest : Performance & Dra
                         ax0.scatter(exits.index, exits[col], color="red", marker="v", s=50, zorder=5, alpha=0.85)
         else:
             c0 = "#e2e8f0" if dark_theme else "black"
-            ax0.plot(df.index, df["Close"], label=f"Prix {symbol or 'actif'}", color=c0, alpha=0.85, linewidth=1.5)
+            ax0.plot(df.index, df["Close"], label=f"Price {symbol or 'asset'}", color=c0, alpha=0.85, linewidth=1.5)
             if "signal" in df.columns:
                 entries = df[df["signal"].diff() == 1]
                 exits = df[df["signal"].diff() == -1]
                 if len(entries) > 0:
-                    ax0.scatter(entries.index, entries["Close"], color="green", marker="^", s=80, zorder=5, label="Achat")
+                    ax0.scatter(entries.index, entries["Close"], color="green", marker="^", s=80, zorder=5, label="Buy")
                 if len(exits) > 0:
-                    ax0.scatter(exits.index, exits["Close"], color="red", marker="v", s=80, zorder=5, label="Vente")
-        ax0.set_ylabel("Prix ($)")
-        ax0.set_title("Évolution des prix")
+                    ax0.scatter(exits.index, exits["Close"], color="red", marker="v", s=80, zorder=5, label="Sell")
+        ax0.set_ylabel("Price ($)")
+        ax0.set_title("Price evolution")
         ax0.legend(loc="upper left", fontsize=9)
         ax0.grid(True, alpha=0.3)
         ax0.set_ylim(bottom=0)
@@ -1599,23 +1600,23 @@ def get_plot_figure(df: pd.DataFrame, title: str = "Backtest : Performance & Dra
     if not hide_comparison:
         bh_c = "#94a3b8" if dark_theme else "gray"
         sp500_c = "#64748b" if dark_theme else "#475569"
-        ax1.plot(df.index, df["bh_equity"], label="B&H (portefeuille)", color=bh_c, alpha=0.85, linewidth=1.5)
+        ax1.plot(df.index, df["bh_equity"], label="B&H (portfolio)", color=bh_c, alpha=0.85, linewidth=1.5)
         if "sp500_equity" in df.columns:
             ax1.plot(df.index, df["sp500_equity"], label="S&P 500 (benchmark)", color=sp500_c, alpha=0.85, linewidth=1.5, linestyle="-.")
         show_brute = force_show_brute or not np.allclose(df["strategy_equity"].values, df["strategy_equity_net"].values, rtol=1e-5)
         if show_brute:
-            ax1.plot(df.index, df["strategy_equity"], label="Strat. brute (sans frais)", color="darkorange", alpha=0.95, linewidth=2, linestyle="--", zorder=3)
-    ax1.plot(df.index, df["strategy_equity_net"], label="Stratégie" if hide_comparison else "Stratégie (avec frais)", color=strat_c, linewidth=2)
+            ax1.plot(df.index, df["strategy_equity"], label="Gross strat. (no fees)", color="darkorange", alpha=0.95, linewidth=2, linestyle="--", zorder=3)
+    ax1.plot(df.index, df["strategy_equity_net"], label="Strategy" if hide_comparison else "Strategy (with fees)", color=strat_c, linewidth=2)
     # Marqueurs achat/vente
     if hide_comparison and len(df) >= 2:
-        ax1.scatter(df.index[0], df["strategy_equity_net"].iloc[0], color="green", marker="^", s=60, zorder=5, alpha=0.9, label="Achat")
-        ax1.scatter(df.index[-1], df["strategy_equity_net"].iloc[-1], color="red", marker="v", s=60, zorder=5, alpha=0.9, label="Vente")
+        ax1.scatter(df.index[0], df["strategy_equity_net"].iloc[0], color="green", marker="^", s=60, zorder=5, alpha=0.9, label="Buy")
+        ax1.scatter(df.index[-1], df["strategy_equity_net"].iloc[-1], color="red", marker="v", s=60, zorder=5, alpha=0.9, label="Sell")
     elif "signal" in df.columns and not hide_comparison:
         sig = df["signal"].fillna(0).astype(int)
         entries = df[sig.diff() == 1]
         exits = df[sig.diff() == -1]
         max_m = 150
-        for evt, label, color, m in [(entries, "Achat", "green", "^"), (exits, "Vente", "red", "v")]:
+        for evt, label, color, m in [(entries, "Buy", "green", "^"), (exits, "Sell", "red", "v")]:
             if len(evt) > 0:
                 sub = evt.iloc[:: max(1, len(evt) // max_m)] if len(evt) > max_m else evt
                 ax1.scatter(sub.index, sub["strategy_equity_net"], color=color, marker=m, s=45, zorder=5, alpha=0.9, label=label)
@@ -1658,11 +1659,11 @@ def get_plot_figure(df: pd.DataFrame, title: str = "Backtest : Performance & Dra
 
 
 def plot_results(df: pd.DataFrame, output_path: str = "backtest_results.png"):
-    """Sauvegarde le graphique sur disque."""
+    """Saves the chart to disk."""
     fig = get_plot_figure(df)
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"Graphique sauvegardé : {output_path}")
+    print(f"Chart saved: {output_path}")
 
 
 # =============================================================================
@@ -1941,7 +1942,7 @@ def run_walk_forward_backtest_buy_hold(symbol, timeframe, since, until, in_sampl
     ohlcv_raw = fetch_ohlcv(symbol, timeframe, since=since, until=until, data_source=data_source)
     df = clean_ohlcv(ohlcv_raw)
     if df.empty or len(df) < 2:
-        raise ValueError(f"Données insuffisantes pour Walk-Forward : {len(df)} barres. Vérifiez le ticker ({symbol}) et la période ({since.date()} → {until.date()}).")
+        raise ValueError(f"Insufficient data for Walk-Forward: {len(df)} bars. Check ticker ({symbol}) and period ({since.date()} → {until.date()}).")
     split_idx = max(1, min(len(df) - 1, int(len(df) * in_sample_pct)))
     ppy = {"1m": 525600, "5m": 105120, "15m": 35040, "1h": 8760, "4h": 2190, "1d": 365, "1wk": 52, "1mo": 12}.get(timeframe, 8760)
     df_in_bt, r_in = run_backtest_on_df_buy_hold(df.iloc[:split_idx], commission_pct, slippage_pct, periods_per_year=ppy, spread_pct=spread_pct)
@@ -2375,12 +2376,12 @@ if __name__ == "__main__":
     )
 
     print("\n" + "=" * 50)
-    print("RAPPORT DE RISQUE")
+    print("RISK REPORT")
     print("=" * 50)
     print(f"Sharpe Ratio       : {report['sharpe_ratio']:.2f}")
-    print(f"Max Drawdown       : {report['max_drawdown_pct']:.2f}%")
-    print(f"Win Rate           : {report['win_rate_pct']:.1f}%")
-    print(f"Nombre de trades   : {report['n_trades']}")
-    print(f"Rendement Stratégie: {report['total_return_pct']:.2f}%")
-    print(f"Rendement Buy&Hold : {report['bh_return_pct']:.2f}%")
+    print(f"Max Drawdown      : {report['max_drawdown_pct']:.2f}%")
+    print(f"Win Rate          : {report['win_rate_pct']:.1f}%")
+    print(f"Number of trades  : {report['n_trades']}")
+    print(f"Strategy Return   : {report['total_return_pct']:.2f}%")
+    print(f"Buy & Hold Return : {report['bh_return_pct']:.2f}%")
     print("=" * 50)
