@@ -1831,12 +1831,25 @@ def run_walk_forward_backtest(
     Walk-Forward : split In-Sample (optimisation) / Out-of-Sample (validation).
     Confirme que la stratégie n'était pas juste de la chance sur la période.
     """
-    ohlcv_raw = fetch_ohlcv(symbol, timeframe, since=since, until=until, data_source=data_source)
+    warmup_bars = max(sma_slow, rsi_period if use_rsi_filter else 0, volume_ma_period if use_volume_filter else 0)
+    since_fetch, until_fetch = since, until
+    if warmup_bars > 0:
+        tf_days = {"1d": 1, "1wk": 7, "1mo": 30}.get(timeframe, 1)
+        since_fetch = since - timedelta(days=warmup_bars * tf_days)
+    ohlcv_raw = fetch_ohlcv(symbol, timeframe, since=since_fetch, until=until_fetch, data_source=data_source)
     df = clean_ohlcv(ohlcv_raw)
 
-    split_idx = int(len(df) * in_sample_pct)
-    df_in = df.iloc[:split_idx]
-    df_out = df.iloc[split_idx:]
+    since_ts = pd.Timestamp(since)
+    valid_mask = df.index >= since_ts
+    valid_indices = df.index[valid_mask].tolist()
+    n_valid = len(valid_indices)
+    if n_valid == 0:
+        raise ValueError(f"No data in period [{since.date()}, {until.date()}]. Check ticker and dates.")
+    split_in_valid = min(int(n_valid * in_sample_pct), n_valid - 1)
+    split_pos = df.index.get_loc(valid_indices[split_in_valid])
+
+    df_in = df.iloc[: split_pos + 1]
+    df_out_raw = df.iloc[max(0, split_pos + 1 - warmup_bars):] if warmup_bars > 0 else df.iloc[split_pos + 1:]
 
     periods_per_year = {"1m": 525600, "5m": 105120, "15m": 35040, "1h": 8760, "4h": 2190, "1d": 365, "1wk": 52, "1mo": 12}.get(timeframe, 8760)
 
@@ -1852,7 +1865,7 @@ def run_walk_forward_backtest(
         periods_per_year=periods_per_year, spread_pct=spread_pct,
     )
     df_out_bt, report_out = run_backtest_on_df(
-        df_out,
+        df_out_raw,
         sma_fast=sma_fast, sma_slow=sma_slow, short_allowed=short_allowed,
         start_in_cash=start_in_cash,
         use_rsi_filter=use_rsi_filter, rsi_period=rsi_period,
@@ -1863,6 +1876,11 @@ def run_walk_forward_backtest(
         periods_per_year=periods_per_year, spread_pct=spread_pct,
     )
 
+    # Filter out-of-sample to validation period only (exclude warmup from report)
+    oos_start_ts = valid_indices[split_in_valid] if split_in_valid < n_valid else df.index[split_pos]
+    df_out_bt = df_out_bt[df_out_bt.index >= oos_start_ts] if len(df_out_bt) > 0 else df_out_bt
+    report_out = compute_risk_report(df_out_bt, periods_per_year=periods_per_year) if len(df_out_bt) > 0 else report_out
+
     return {
         "in_sample": {
             "df": df_in_bt,
@@ -1872,7 +1890,7 @@ def run_walk_forward_backtest(
         "out_of_sample": {
             "df": df_out_bt,
             "report": report_out,
-            "period": (df_out.index[0], df_out.index[-1]),
+            "period": (oos_start_ts, df.index[-1]) if len(df_out_bt) > 0 else (None, None),
         },
         "robust": report_in["total_return_pct"] > 0 and report_out["total_return_pct"] > 0,
     }
@@ -2210,13 +2228,18 @@ def run_backtest(
             except (ValueError, OSError):
                 pass
 
-    # 1. Data Pipeline
+    # 1. Data Pipeline (with warmup before start date for indicator initialization)
     _log("Étape 1 : Récupération des données...")
+    warmup_bars = max(sma_slow, rsi_period if use_rsi_filter else 0, volume_ma_period if use_volume_filter else 0) if (since is not None and until is not None) else 0
+    since_fetch, until_fetch = since, until
+    if since is not None and until is not None and warmup_bars > 0:
+        tf_days = {"1d": 1, "1wk": 7, "1mo": 30}.get(timeframe, 1)
+        since_fetch = since - timedelta(days=warmup_bars * tf_days)
     ohlcv_raw = fetch_ohlcv(
         symbol, timeframe,
         limit=limit,
-        since=since,
-        until=until,
+        since=since_fetch,
+        until=until_fetch,
         data_source=data_source,
     )
 
@@ -2248,6 +2271,12 @@ def run_backtest(
     # 5. Reality Check
     _log("Étape 5 : Application des frais et slippage...")
     df = apply_costs(df, commission_pct, slippage_pct, spread_pct)
+
+    # 5b. Filter to user period (exclude warmup from metrics)
+    if since is not None and until is not None and warmup_bars > 0 and len(df) > 0:
+        since_ts, until_ts = pd.Timestamp(since), pd.Timestamp(until)
+        mask = (df.index >= since_ts) & (df.index <= until_ts)
+        df = df.loc[mask]
 
     # 6. Risk Report
     _log("Étape 6 : Rapport de risque...")
