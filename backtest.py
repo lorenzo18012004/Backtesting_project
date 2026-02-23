@@ -1840,11 +1840,19 @@ def run_walk_forward_backtest(
     df = clean_ohlcv(ohlcv_raw)
 
     since_ts = pd.Timestamp(since)
-    valid_mask = df.index >= since_ts
+    until_ts = pd.Timestamp(until)
+    valid_mask = (df.index >= since_ts) & (df.index <= until_ts)
     valid_indices = df.index[valid_mask].tolist()
     n_valid = len(valid_indices)
     if n_valid == 0:
-        raise ValueError(f"No data in period [{since.date()}, {until.date()}]. Check ticker and dates.")
+        if len(df) == 0:
+            raise ValueError(f"No data for ticker in period [{since.date()}, {until.date()}]. Check ticker and dates.")
+        data_min, data_max = df.index.min(), df.index.max()
+        raise ValueError(
+            f"No data in period [{since.date()}, {until.date()}]. "
+            f"Available data: {data_min.date()} to {data_max.date()}. "
+            f"Start date may be after latest data, or end date may be in the future."
+        )
     split_in_valid = min(int(n_valid * in_sample_pct), n_valid - 1)
     split_pos = df.index.get_loc(valid_indices[split_in_valid])
 
