@@ -1,0 +1,11 @@
+{
+  "launch_date": "2026-02-23",
+  "tickers": [
+    "JPM",
+    "XOM",
+    "PG",
+    "JNJ",
+    "HON"
+  ],
+  "initial_capital": 10000
+}
