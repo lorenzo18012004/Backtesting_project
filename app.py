@@ -201,23 +201,18 @@ if strat_id == "live":
     st.markdown(f"## {strat['icon']} {strat['name']}")
     st.caption(strat["description"])
     st.divider()
+    st.info(f"**Strategy launched on {live_config['launch_date']}** · Tickers: {', '.join(live_config['tickers'])} · Initial capital: €{INITIAL_CAPITAL:,.0f} · *Config frozen, auto-updated on each visit.*")
 
     since_live = datetime.strptime(live_config["launch_date"], "%Y-%m-%d")
     until_live = datetime.now()
     symbols_live = live_config["tickers"]
-    warmup_days = 352  # max(252, 50) + 100 pour Markowitz + facteurs
-    since_warmup = (since_live - timedelta(days=warmup_days)).strftime("%Y-%m-%d")
-    st.info(
-        f"**Strategy launched on {live_config['launch_date']}** · Tickers: {', '.join(live_config['tickers'])} · Initial capital: €{INITIAL_CAPITAL:,.0f} · "
-        f"*Warmup: données depuis {since_warmup} pour initialiser les indicateurs. Résultats affichés à partir du {live_config['launch_date']}.*"
-    )
 
     with st.spinner("Loading data and computing..."):
         try:
             df_live, report_live = run_backtest_portfolio_hf(symbols=symbols_live, timeframe="1d", since=since_live, until=until_live, commission_pct=0.001, slippage_pct=0.0002)
 
             if df_live.empty or len(df_live) == 0:
-                st.warning("No data yet for this period. Try again tomorrow after market close.")
+                st.warning("Pas encore assez de données pour cette période.")
                 st.stop()
 
             eq = df_live["strategy_equity_net"].values
@@ -228,13 +223,12 @@ if strat_id == "live":
             pnl_eur = current_val - INITIAL_CAPITAL
             pnl_pct = (current_val / INITIAL_CAPITAL - 1) * 100
 
-            if pd.isna(eq_eur[-1]) or pd.isna(current_val):
-                st.warning(
-                    "**Données indisponibles** — Yahoo Finance ne renvoie pas de données valides depuis les serveurs Streamlit Cloud "
-                    "(blocage fréquent). Lancez l'app en local : `streamlit run app.py` pour voir les résultats."
-                )
-                st.info("Période demandée : " + since_live.strftime("%Y-%m-%d") + " → " + until_live.strftime("%Y-%m-%d"))
-                st.stop()
+            if pd.isna(eq_eur[-1]) or pd.isna(eq_eur).any():
+                st.warning("Pas encore assez de données pour cette période.")
+                current_val = INITIAL_CAPITAL
+                pnl_eur = 0.0
+                pnl_pct = 0.0
+                scale = INITIAL_CAPITAL
 
             c1, c2, c3, c4 = st.columns(4)
             with c1:
@@ -247,13 +241,13 @@ if strat_id == "live":
                 st.metric("Last update", df_live.index[-1].strftime("%Y-%m-%d"), "")
 
             df_plot = df_live.copy()
-            df_plot["equity_eur"] = df_plot["strategy_equity_net"] * scale
+            df_plot["equity_eur"] = (df_plot["strategy_equity_net"] * scale).fillna(INITIAL_CAPITAL)
             if "bh_equity" in df_plot.columns:
                 bh0 = float(df_plot["bh_equity"].iloc[0]) or 1.0
-                df_plot["bh_eur"] = df_plot["bh_equity"] * (INITIAL_CAPITAL / bh0)
+                df_plot["bh_eur"] = (df_plot["bh_equity"] * (INITIAL_CAPITAL / bh0)).fillna(INITIAL_CAPITAL)
             if "sp500_equity" in df_plot.columns:
                 sp0 = float(df_plot["sp500_equity"].iloc[0]) or 1.0
-                df_plot["sp500_eur"] = df_plot["sp500_equity"] * (INITIAL_CAPITAL / sp0)
+                df_plot["sp500_eur"] = (df_plot["sp500_equity"] * (INITIAL_CAPITAL / sp0)).fillna(INITIAL_CAPITAL)
 
             st.markdown("### Capital evolution (€)")
             fig, ax = plt.subplots(figsize=(14, 5))
