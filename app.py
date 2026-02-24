@@ -201,11 +201,16 @@ if strat_id == "live":
     st.markdown(f"## {strat['icon']} {strat['name']}")
     st.caption(strat["description"])
     st.divider()
-    st.info(f"**Strategy launched on {live_config['launch_date']}** · Tickers: {', '.join(live_config['tickers'])} · Initial capital: €{INITIAL_CAPITAL:,.0f} · *Config frozen, auto-updated on each visit.*")
 
     since_live = datetime.strptime(live_config["launch_date"], "%Y-%m-%d")
     until_live = datetime.now()
     symbols_live = live_config["tickers"]
+    warmup_days = 352  # max(252, 50) + 100 pour Markowitz + facteurs
+    since_warmup = (since_live - timedelta(days=warmup_days)).strftime("%Y-%m-%d")
+    st.info(
+        f"**Strategy launched on {live_config['launch_date']}** · Tickers: {', '.join(live_config['tickers'])} · Initial capital: €{INITIAL_CAPITAL:,.0f} · "
+        f"*Warmup: données depuis {since_warmup} pour initialiser les indicateurs. Résultats affichés à partir du {live_config['launch_date']}.*"
+    )
 
     with st.spinner("Loading data and computing..."):
         try:
@@ -216,11 +221,20 @@ if strat_id == "live":
                 st.stop()
 
             eq = df_live["strategy_equity_net"].values
-            scale = INITIAL_CAPITAL / (eq[0] or 1)
+            eq0 = float(eq[0]) if len(eq) > 0 and not pd.isna(eq[0]) and eq[0] != 0 else 1.0
+            scale = INITIAL_CAPITAL / eq0
             eq_eur = eq * scale
-            current_val = float(eq_eur[-1])
+            current_val = float(eq_eur[-1]) if not pd.isna(eq_eur[-1]) else INITIAL_CAPITAL
             pnl_eur = current_val - INITIAL_CAPITAL
             pnl_pct = (current_val / INITIAL_CAPITAL - 1) * 100
+
+            if pd.isna(eq_eur[-1]) or pd.isna(current_val):
+                st.warning(
+                    "**Données indisponibles** — Yahoo Finance ne renvoie pas de données valides depuis les serveurs Streamlit Cloud "
+                    "(blocage fréquent). Lancez l'app en local : `streamlit run app.py` pour voir les résultats."
+                )
+                st.info("Période demandée : " + since_live.strftime("%Y-%m-%d") + " → " + until_live.strftime("%Y-%m-%d"))
+                st.stop()
 
             c1, c2, c3, c4 = st.columns(4)
             with c1:
