@@ -117,12 +117,17 @@ def run_backtest_portfolio(
         df = apply_costs(df, commission_pct, slippage_pct)
         dfs[sym] = df
 
+    if not symbols:
+        return pd.DataFrame(), {}
+
     common_idx = dfs[symbols[0]].index
     for sym in symbols[1:]:
         common_idx = common_idx.intersection(dfs[sym].index)
     common_idx = common_idx.sort_values()
 
     n = len(common_idx)
+    if n == 0:
+        return pd.DataFrame(), {}
     portfolio_return = pd.Series(0.0, index=common_idx)
     bh_return = pd.Series(0.0, index=common_idx)
     eq_w = 1.0 / len(symbols)
@@ -355,7 +360,7 @@ def run_backtest_portfolio_hf(
     until_fetch = until
     if since is not None and until is not None:
         tf_days = {"1d": 1, "1wk": 7, "1mo": 30}.get(timeframe, 1)
-        since_fetch = since - timedelta(days=warmup * tf_days)
+        since_fetch = since - timedelta(days=int(warmup * tf_days * 1.6))
 
     dfs = {}
     for sym in symbols:
@@ -372,11 +377,17 @@ def run_backtest_portfolio_hf(
         )
         dfs[sym] = df
 
+    if not symbols:
+        return pd.DataFrame(), {}
+
     common_idx = dfs[symbols[0]].index
     for sym in symbols[1:]:
         common_idx = common_idx.intersection(dfs[sym].index)
     common_idx = common_idx.sort_values()
     n = len(common_idx)
+
+    if n == 0:
+        return pd.DataFrame(), {}
 
     eq_w = 1.0 / len(symbols)
     bh_return = pd.Series(0.0, index=common_idx)
